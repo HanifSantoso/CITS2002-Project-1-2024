@@ -9,10 +9,10 @@
 #include <stdbool.h>
 #include <ctype.h>
 
-#define CFILENAME 128
-#define EXEFILENAME 128
-#define COMMANDLINE 256
-#define FUNCVAR 50
+#define CFILENAME_SIZE 128
+#define EXEFILENAME_SIZE 128
+#define COMMANDLINE_SIZE 256
+#define FUNCVAR_SIZE 50
 
 bool validateFile(FILE *mlFile);
 
@@ -28,13 +28,13 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
     // Validate the .ml program
-    char line[COMMANDLINE];
-    while (fgets(line, sizeof(line), mlFile) != NULL) {
+    char line[COMMANDLINE_SIZE];
+    while (fgets(line, sizeof(COMMANDLINE_SIZE), mlFile) != NULL) {
         // // put function somewhere here
     }
 
     // Generate temporary C file
-    char temporaryC[CFILENAME];
+    char temporaryC[CFILENAME_SIZE];
         sprintf(temporaryC, "ml-%d.c", getpid()); // sprintf assumed to be sufficient for buffer size
 
     // Translate .ml to C
@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
     fclose(mlFile); // closing ml file
 
     // Compile C file to executable
-    char cExecutable[EXEFILENAME];
+    char cExecutable[EXEFILENAME_SIZE];
 
     sprintf(cExecutable, "ml-%d", getpid()); // using sprintf since the buffer size is assumed to be sufficient
 
@@ -56,10 +56,10 @@ int main(int argc, char *argv[]) {
 }
 
 bool validateFile(FILE *mlFile) {
-    char line[COMMANDLINE];
-    char *functions[FUNCVAR];
-    char *variables[FUNCVAR];
-    while (fgets(line, sizeof(line), mlFile) != NULL) {
+    char line[COMMANDLINE_SIZE];
+    char *functions[FUNCVAR_SIZE];
+    char *variables[FUNCVAR_SIZE];
+    while (fgets(line, sizeof(COMMANDLINE_SIZE), mlFile) != NULL) {
         // something cool
     }
     rewind(mlFile);
@@ -67,15 +67,15 @@ bool validateFile(FILE *mlFile) {
 }
 
 int executeProgram(const char *exeName, int argc, char *argv[]) {
-    char command[COMMANDLINE];
+    char command[COMMANDLINE_SIZE];
     // initializing command buffer with the filename
-    snprintf(command, sizeof(command), "./%s", exeName);
+    snprintf(command, sizeof(COMMANDLINE_SIZE), "./%s", exeName);
 
     // append each argument to the command string
     for (int i = 0; i < argc; i++) {
         // safely append a space followed by the argument
-        strncat(command, " ", sizeof(command) - strlen(command) - 1);
-        strncat(command, argv[i], sizeof(command) - strlen(command) - 1);
+        strncat(command, " ", sizeof(COMMANDLINE_SIZE) - strlen(command) - 1);
+        strncat(command, argv[i], sizeof(COMMANDLINE_SIZE) - strlen(command) - 1);
     }
 
     // execute the command
@@ -89,10 +89,10 @@ int executeProgram(const char *exeName, int argc, char *argv[]) {
 }
 
 int compileProgram(const char *programName, const char *exeName) {
-    char command[COMMANDLINE];
+    char command[COMMANDLINE_SIZE];
     
     // construct the gcc command
-    snprintf(command, sizeof(command), "gcc -std=c11 %s -o %s", programName, exeName);
+    snprintf(command, sizeof(COMMANDLINE_SIZE), "gcc -std=c11 %s -o %s", programName, exeName);
 
     // execute the gcc command
     int status = system(command);
