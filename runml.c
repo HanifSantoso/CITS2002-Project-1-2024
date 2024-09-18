@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
 
     // Generate temporary C file
     char temporaryC[CFILENAME_SIZE];
-        sprintf(temporaryC, "ml-%d.c", getpid()); // sprintf assumed to be sufficient for buffer size
+        snprintf(temporaryC, CFILENAME_SIZE, "ml-%d.c", getpid()); // snprintf used to prevent buffer overflows
 
     // Translate .ml to C
     // // Put function here
@@ -45,14 +45,20 @@ int main(int argc, char *argv[]) {
     // Compile C file to executable
     char cExecutable[EXEFILENAME_SIZE];
 
-    sprintf(cExecutable, "ml-%d", getpid()); // using sprintf since the buffer size is assumed to be sufficient
+    snprintf(cExecutable, EXEFILENAME_SIZE, "ml-%d", getpid()); // using spnrintf to prevent potential buffer overflows
 
     if (!compile_c_program(temporaryC, cExecutable)) {
         return EXIT_FAILURE;
     }
 
     // Execute
+    int executeResult = executeProgram(cExecutable, argc - 2, argv + 2);
+
     // Clean up temporary
+    remove(temporaryC);
+    remove(cExecutable);
+
+    return executeResult;
 }
 
 bool validateFile(FILE *mlFile) {
