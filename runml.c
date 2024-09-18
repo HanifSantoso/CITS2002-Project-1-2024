@@ -21,40 +21,42 @@ int main(int argc, char *argv[]) {
         print_usage(argv[0]);
         exit(EXIT_FAILURE);
     }
-    // Open the .ml file
+    // open .ml file
     FILE *mlFile = fopen(argv[1], "r");
     if (mlFile == NULL) {
         fprintf(stderr, "Cannot find filepath:%s\n", argv[1]);
         exit(EXIT_FAILURE);
     }
-    // Validate the .ml program
+    // validate the .ml program
     char line[COMMANDLINE_SIZE];
     while (fgets(line, sizeof(COMMANDLINE_SIZE), mlFile) != NULL) {
         // // put function somewhere here
     }
 
-    // Generate temporary C file
+    // generate temporary C file
     char temporaryC[CFILENAME_SIZE];
         snprintf(temporaryC, CFILENAME_SIZE, "ml-%d.c", getpid()); // snprintf used to prevent buffer overflows
 
-    // Translate .ml to C
-    // // Put function here
+    // translate .ml to C
+    if (!translateFunction(mlFile, temporaryC)) {
+        return EXIT_FAILURE;
+    }
 
     fclose(mlFile); // closing ml file
 
-    // Compile C file to executable
+    // compile C file to executable
     char cExecutable[EXEFILENAME_SIZE];
 
     snprintf(cExecutable, EXEFILENAME_SIZE, "ml-%d", getpid()); // using spnrintf to prevent potential buffer overflows
 
-    if (!compile_c_program(temporaryC, cExecutable)) {
+    if (!compileProgram(temporaryC, cExecutable)) {
         return EXIT_FAILURE;
     }
 
-    // Execute
+    // execute program
     int executeResult = executeProgram(cExecutable, argc - 2, argv + 2);
 
-    // Clean up temporary
+    // clean up temporary
     remove(temporaryC);
     remove(cExecutable);
 
@@ -89,9 +91,9 @@ int executeProgram(const char *exeName, int argc, char *argv[]) {
     if (status != 0) {
         // print an error message if execution fails
         fprintf(stderr, "Error: Execution of '%s' failed\n", exeName);
-        return EXIT_FAILURE;
+        return 0;
     }
-    return EXIT_SUCCESS;
+    return 1;
 }
 
 int compileProgram(const char *programName, const char *exeName) {
@@ -110,4 +112,88 @@ int compileProgram(const char *programName, const char *exeName) {
     }
 
     return 1; // return 1 for success
+}
+
+int translateFunction(char **function, FILE *cFile) {
+    int ch = 0;
+    char *r_type = ""; // return type
+    bool foundReturn = false; // flag to track if return was found
+
+    // determine return type based on the function body
+    while (function[2][ch] != '\0') {
+        if (strncmp(&function[2][ch], "\treturn", 7) == 0) {
+            r_type = "float";  // assuming all functions that return use float
+            foundReturn = true;
+            break;
+        }
+        ch++;
+    }
+
+    if (!foundReturn) {
+        r_type = "void";  // default to void if no return statement is found
+    }
+
+    // reset ch to process the body
+    ch = 0;
+
+    // write function signature to the C file
+    fprintf(cFile, "%s %s(%s) {\n", r_type, function[0], function[1]);
+
+    // parse body of function
+    while (function[2][ch] != '\0') {
+        if (strncmp(&function[2][ch], "\treturn", 7) == 0) {
+            char expression[128];
+            int i = 7;  // offset for the start of the return expression
+
+            // extract the return expression
+            while (function[2][ch + i] != '\n' && function[2][ch + i] != '\0') {
+                expression[i - 7] = function[2][ch + i];
+                i++;
+            }
+            expression[i - 7] = '\0';  // null-terminate the expression
+
+            // write the return statement to the C file
+            fprintf(cFile, "    return %s;\n", expression);
+        } 
+        else if (strncmp(&function[2][ch], "\tprint", 6) == 0) {
+            char expression[128];
+            int i = 6;  // offset for the start of the print expression
+
+            // extract the print expression
+            while (function[2][ch + i] != '\n' && function[2][ch + i] != '\0') {
+                expression[i - 6] = function[2][ch + i];
+                i++;
+            }
+            expression[i - 6] = '\0';  // null-terminate the expression
+
+            // printf based on type checking
+            if (is_integer(expression)) { // implement a helper function for this
+                fprintf(cFile, "    printf(\"%%d\", %s);\n", expression);
+            } else {
+                fprintf(cFile, "    printf(\"%%f\", %s);\n", expression);
+            }
+        } 
+        else if (function[2][ch] == '<' && function[2][ch + 1] == '-') {
+            // handle variable assignment, assuming the format is <var> <- <value>;
+            char var_name[FUNCVAR_SIZE];
+            char value[FUNCVAR_SIZE];
+            sscanf(&function[2][ch], "%s <- %s", var_name, value);
+
+            // write the variable declaration and assignment to the C file
+            fprintf(cFile, "    float %s = %s;\n", var_name, value);
+
+            // store variable name for future use or checking
+            // store in an array for further processing if needed
+        } 
+        else {
+            // handle syntax errors
+            fprintf(stderr, "Syntax error: Unexpected token in function body: %s\n", &function[2][ch]);
+            return 0;
+        }
+        ch++;
+    }
+
+    // close the function in the C file
+    fprintf(cFile, "}\n");
+    return 1;
 }
