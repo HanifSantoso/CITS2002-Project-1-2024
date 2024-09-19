@@ -12,7 +12,7 @@
 
 #define CFILENAME_SIZE 128
 #define EXEFILENAME_SIZE 128
-#define COMMANDLINE_SIZE 256
+#define COMMAND_SIZE 1024
 #define FUNCVAR_SIZE 50
 #define MAX_ID_LENGTH 12
 #define MAX_LINE_LENGTH 256
@@ -86,7 +86,6 @@ int main(int argc, char *argv[]) {
     int executeResult = executeProgram(cExecutable, argc - 2, argv + 2);
 
     // clean up temporary
-    remove(cFile);
     remove(cExecutable);
     remove(temporaryC);
 
@@ -95,15 +94,15 @@ int main(int argc, char *argv[]) {
 
 // function to execute the program
 int executeProgram(const char *exeName, int argc, char *argv[]) {
-    char command[COMMANDLINE_SIZE];
+    char command[COMMAND_SIZE];
     // initializing command buffer with the filename
-    snprintf(command, sizeof(COMMANDLINE_SIZE), "./%s", exeName);
+    snprintf(command, sizeof(COMMAND_SIZE), "./%s", exeName);
 
     // append each argument to the command string
     for (int i = 0; i < argc; i++) {
         // safely append a space followed by the argument
-        strncat(command, " ", sizeof(COMMANDLINE_SIZE) - strlen(command) - 1);
-        strncat(command, argv[i], sizeof(COMMANDLINE_SIZE) - strlen(command) - 1);
+        strncat(command, " ", sizeof(COMMAND_SIZE) - strlen(command) - 1);
+        strncat(command, argv[i], sizeof(COMMAND_SIZE) - strlen(command) - 1);
     }
 
     // execute the command
@@ -118,10 +117,10 @@ int executeProgram(const char *exeName, int argc, char *argv[]) {
 
 // function to compile the executable
 int compileProgram(const char *programName, const char *exeName) {
-    char command[COMMANDLINE_SIZE];
+    char command[COMMAND_SIZE];
     
     // construct the gcc command
-    snprintf(command, sizeof(COMMANDLINE_SIZE), "gcc -std=c11 %s -o %s", programName, exeName);
+    snprintf(command, sizeof(COMMAND_SIZE), "gcc -std=c11 %s -o %s", programName, exeName);
 
     // execute the gcc command
     int status = system(command);
