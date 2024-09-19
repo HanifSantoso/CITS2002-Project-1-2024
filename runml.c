@@ -351,3 +351,117 @@ void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBod
     // close the function in the C file
     fprintf(cFile, "}\n");
 }
+
+int parseML(FILE *mlFile, FILE *cFile) {
+    char line[MAX_LINE_LENGTH];
+    char fName[3][MAX_ID_LENGTH];    // array to store function name, number of parameters, and number of lines
+    char *fParam[MAX_IDENTIFIERS] = {0};   // array to hold function parameters
+    char *fBody[MAX_IDENTIFIERS] = {0};    // array to hold function body lines
+    int bodyLineCount = 0;           // tracks the number of lines in the function body
+    char variables[MAX_IDENTIFIERS][MAX_ID_LENGTH]; // array to store variable names
+    int var_count = 0;               // counter for the number of variables
+    char var_name[MAX_ID_LENGTH];   // buffer to hold the variable name
+    char value[MAX_ID_LENGTH];      // buffer to hold the value (not used in current code)
+    char expression[MAX_LINE_LENGTH]; // buffer to hold expressions
+
+    while (fgets(line, sizeof(line), mlFile) != NULL) {
+        if (line[0] == '#' || line[0] == '\n') {
+            // skip comments and empty lines
+            continue;
+        } else if (strncmp(line, "function ", 9) == 0) {
+            int i = 9;  // start reading function name after "function "
+            int fNameIndex = 0;
+
+            // parse function name
+            while (line[i] != ' ' && line[i] != '\n' && fNameIndex < MAX_ID_LENGTH - 1) {
+                fName[0][fNameIndex++] = line[i++];
+            }
+            fName[0][fNameIndex] = '\0';
+
+            // skip spaces between function name and parameters
+            while (line[i] == ' ') i++;
+
+            // parse function parameters
+            int paramCount = 0;
+            while (line[i] != '\n' && line[i] != '\0' && paramCount < MAX_IDENTIFIERS) {
+                while (line[i] == ' ') i++; // skip extra spaces between parameters
+                if (isalpha(line[i])) {
+                    fParam[paramCount] = malloc(MAX_ID_LENGTH);
+                    if (fParam[paramCount] == NULL) {
+                        perror("Failed to allocate memory");
+                        exit(EXIT_FAILURE);
+                    }
+                    int paramIndex = 0;
+                    while (isalpha(line[i]) && paramIndex < MAX_ID_LENGTH - 1) {
+                        fParam[paramCount][paramIndex++] = line[i++];
+                    }
+                    fParam[paramCount][paramIndex] = '\0';
+                    paramCount++;
+                } else {
+                    i++;
+                }
+            }
+            sprintf(fName[1], "%d", paramCount);  // store number of parameters
+
+            // parse function body (assume body starts after function declaration)
+            while (fgets(line, sizeof(line), mlFile) != NULL && line[0] != '\n' && line[0] != '#') {
+                if (bodyLineCount >= MAX_IDENTIFIERS) {
+                    fprintf(stderr, "Error: Exceeded maximum number of function body lines\n");
+                    return EXIT_FAILURE;
+                }
+                fBody[bodyLineCount] = malloc(MAX_LINE_LENGTH);
+                if (fBody[bodyLineCount] == NULL) {
+                    perror("Failed to allocate memory");
+                    exit(EXIT_FAILURE);
+                }
+                strcpy(fBody[bodyLineCount++], line);
+            }
+            sprintf(fName[2], "%d", bodyLineCount);  // store number of lines in the body
+
+            // call translate_function after parsing each function
+            translate_function(fName, fParam, fBody, variables, &var_count, cFile);
+
+            // free allocated memory for parameters and body lines
+            for (int j = 0; j < paramCount; j++) {
+                free(fParam[j]);
+            }
+            for (int j = 0; j < bodyLineCount; j++) {
+                free(fBody[j]);
+            }
+
+            // reset body line count for the next function
+            bodyLineCount = 0;
+        } else if (sscanf(line, "print %[^\n]", expression) == 1) {
+            // check if the expression contains function calls or complex operations
+            bool is_var = is_variable(expression, variables, var_count);
+            bool is_int = is_integer(expression);
+            bool is_func_call = is_function_call(expression);
+            bool is_flo = is_float(expression);
+        
+            // handle the expression (either variable, integer, function call, or float)
+            if (is_var || is_int || is_func_call || is_flo) {
+                // print as float (can be adjusted to handle different types if needed)
+                fprintf(cFile, "printf(\"%%f\", (float)(%s));\n", expression);
+            } else {
+                fprintf(stderr, "Unknown variable or invalid expression in print statement: %s\n", expression);
+            }
+        } else if (sscanf(line, "%s <- %[^\n]", var_name, expression) == 2) {
+            // store the variable name if not already present
+            bool already_declared = false;
+            for (int i = 0; i < var_count; i++) {
+                if (strcmp(variables[i], var_name) == 0) {
+                    already_declared = true;
+                }
+            }
+            if (!already_declared) {
+                // declare the variable
+                fprintf(cFile, "float %s;\n", var_name);
+                strcpy(variables[var_count], var_name);
+                (var_count)++;
+            }
+            // write the full expression to the C file
+            fprintf(cFile, "%s = %s;\n", var_name, expression);
+        }
+    }
+    return 0;
+}
