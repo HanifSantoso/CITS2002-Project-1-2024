@@ -170,3 +170,57 @@ int validateSyntax(FILE *mlFile) {
 
     return 1;
 }
+
+bool isFloat(const char *str) {
+    bool dotFound = false;
+
+    // skip leading whitespace
+    while (isspace(*str)) {
+        str++;
+    }
+
+    // check if the string starts with a digit or a dot
+    if (!isdigit(*str) && *str != '.') {
+        return false; // must start with a digit or dot
+    }
+
+    // check the rest of the string
+    while (*str) {
+        if (*str == '.') {
+            if (dotFound) {
+                return false; // multiple dots are not allowed
+            }
+            dotFound = true;
+        } else if (!isdigit(*str)) {
+            return false; // invalid character for a float
+        }
+        str++;
+    }
+
+    return dotFound; // must contain at least one dot to be a valid float
+}
+
+int isInteger(const char *str) {
+    while (*str) {
+        if (!isdigit(*str)) {
+            return 0; // not integer
+        }
+        str++;
+    }
+    return 1; // is integer
+}
+
+bool is_variable(const char *expression, char variables[MAX_IDENTIFIERS][MAX_ID_LENGTH], int var_count) {
+    // simple check for the expression if it contains variables
+    for (int i = 0; i < var_count; i++) {
+        if (strcmp(variables[i], expression) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool is_function_call(const char *expression) {
+    // a simple check to see if the expression contains a function call like `function_name(args)`
+    return (strchr(expression, '(') && strchr(expression, ')'));
+}
