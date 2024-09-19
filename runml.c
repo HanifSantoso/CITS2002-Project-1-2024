@@ -415,7 +415,7 @@ int parseML(FILE *mlFile, FILE *cFile) {
     char expression[MAX_LINE_LENGTH]; // buffer to hold expressions
 
     // Write the main function header
-    fprintf(cFile, "#include <stdio.h>\n\n");
+    fprintf(cFile, "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n\n");
     fprintf(cFile, "int main() {\n");
 
     while (fgets(line, sizeof(line), mlFile) != NULL) {
@@ -517,7 +517,7 @@ int parseML(FILE *mlFile, FILE *cFile) {
             fprintf(cFile, "%s = %s;\n", varName, expression);
         }
     }
-    
+
     // Close the main function
     fprintf(cFile, "    return 0;\n");
     fprintf(cFile, "}\n");
