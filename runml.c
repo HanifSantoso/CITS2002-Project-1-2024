@@ -224,3 +224,130 @@ bool is_function_call(const char *expression) {
     // a simple check to see if the expression contains a function call like `function_name(args)`
     return (strchr(expression, '(') && strchr(expression, ')'));
 }
+
+void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBody[], char variables[MAX_IDENTIFIERS][MAX_ID_LENGTH], int *var_count, FILE *cFile) {
+    int ch = 0;
+    char *r_type = ""; // return type
+    bool foundReturn = false; // flag to track if return was found
+    char varName[MAX_ID_LENGTH];
+    char value[MAX_ID_LENGTH];
+    char paramList[MAX_LINE_LENGTH] = "";
+    char expression[MAX_LINE_LENGTH];
+
+    // determine return type based on the function body
+    while (fBody[ch] != NULL && fBody[ch][0] != '\0') {
+        if (strncmp(fBody[ch], "\treturn", 7) == 0) {
+            r_type = "float";  // assuming all functions that return use float
+            foundReturn = true;
+        }
+        ch++;
+    }
+
+    if (!foundReturn) {
+        r_type = "void";  // default to void if no return statement is found
+    }
+
+    // reset ch to process the body
+    ch = 0;
+
+    // write function signature to the C file
+
+    int paramCount = atoi(fName[1]);  // convert fName[1] to an integer (number of parameters)
+
+    // Safeguard: ensure paramCount does not exceed the size of fParam
+    if (paramCount < 0 || paramCount > MAX_IDENTIFIERS) {
+        fprintf(stderr, "Invalid number of parameters: %d\n", paramCount);
+        return;  // Exit if parameter count is invalid
+    }
+
+    // Safeguard: ensure paramList has enough space
+    for (int i = 0; i < paramCount; i++) {
+        // check if the current parameter is valid (not NULL)
+        if (fParam[i] == NULL) {
+            fprintf(stderr, "Invalid parameter at index %d\n", i);
+            return;
+        }
+    
+        // ensure there's enough space in paramList to concatenate the parameter and a comma
+        if (strlen(paramList) + strlen(fParam[i]) + 3 > MAX_LINE_LENGTH) {  // +3 for ", " and null-terminator
+            fprintf(stderr, "Parameter list too long to fit in buffer\n");
+            return;
+        }
+    
+        strcat(paramList, fParam[i]);  // concatenate the parameter name
+    
+        if (i < paramCount - 1) {
+            strcat(paramList, ", ");  // add a comma and space between parameters, except after the last one
+        }
+    }
+
+    // Using paramList in the function declaration
+    fprintf(cFile, "function %s(%s) {\n", fName[0], paramList);  // using fName[0] (the function name) and paramList
+
+    // parse body of function
+    while (fBody[ch] != NULL && fBody[ch][0] != '\0') {
+        if (strncmp(fBody[ch], "\treturn", 7) == 0) {
+            int i = 7;  // offset for the start of the return expression
+
+            // extract the return expression
+            int exprIndex = 0;
+            while (fBody[ch][i] != '\n' && fBody[ch][i] != '\0' && exprIndex < sizeof(expression) - 1) {
+                expression[exprIndex++] = fBody[ch][i++];
+            }
+            expression[exprIndex] = '\0';  // null-terminate the expression
+
+            // write the return statement to the C file
+            fprintf(cFile, "    return%s;\n", expression);
+        } 
+        else if (strncmp(fBody[ch], "\tprint", 6) == 0) {
+            int i = 6;  // offset for the start of the print expression
+
+            // extract the print expression
+            int exprIndex = 0;
+            while (fBody[ch][i] != '\n' && fBody[ch][i] != '\0' && exprIndex < sizeof(expression) - 1) {
+                expression[exprIndex++] = fBody[ch][i++];
+            }
+            expression[exprIndex] = '\0';  // null-terminate the expression
+
+            // check if the expression is a known variable
+            bool is_var = false;
+            for (int i = 0; i < (*var_count); i++) {
+                if (strcmp(variables[i], expression) == 0) {
+                    is_var = true;
+                }
+            }
+
+            // print based on type checking
+            if (is_var || is_integer(expression)) {
+                fprintf(cFile, "    printf(\"%s\", %s);\n", is_integer(expression) ? "%d" : "%f", expression);
+            } else {
+                fprintf(stderr, "Unknown variable or invalid expression in print statement: %s\n", expression);
+            }
+        } 
+        else if (sscanf(fBody[ch], "%s <- %[^\n]", varName, expression) == 2) {
+            // Check if the variable has already been declared
+            bool alreadyDeclared = false;
+            for (int i = 0; i < *var_count; i++) {
+                if (strcmp(variables[i], varName) == 0) {
+                    alreadyDeclared = true;
+                }
+            }
+
+            if (!alreadyDeclared) {
+                // Declare the variable if it's not already declared
+                fprintf(cFile, "    float %s;\n", varName);
+                strcpy(variables[*var_count], varName);
+                (*var_count)++;
+            }
+
+            // Output the full expression to the C file
+            fprintf(cFile, "    %s = %s;\n", varName, expression);
+        } else {
+            fprintf(stderr, "Syntax error in variable assignment: %s\n", fBody[ch]);
+        }
+        ch++;
+    }
+
+    // close the function in the C file
+    fprintf(cFile, "}\n");
+}
