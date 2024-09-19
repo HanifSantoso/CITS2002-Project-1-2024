@@ -18,6 +18,18 @@
 #define MAX_LINE_LENGTH 256
 #define MAX_IDENTIFIERS 50
 
+int executeProgram(const char *exeName, int argc, char *argv[]);
+int compileProgram(const char *programName, const char *exeName);
+void trimTrailingWhitespace(char *str);
+bool isValidID(const char *str);
+bool validateSyntax(FILE *mlFile);
+bool isFloat(const char *str);
+int isInteger(const char *str);
+bool is_variable(const char *expression, char variables[MAX_IDENTIFIERS][MAX_ID_LENGTH], int var_count);
+bool is_function_call(const char *expression);
+void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBody[], char variables[MAX_IDENTIFIERS][MAX_ID_LENGTH], int *var_count, FILE *cFile);
+int parseML(FILE *mlFile, FILE *cFile);
+
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         print_usage(argv[0]);
@@ -103,6 +115,13 @@ int compileProgram(const char *programName, const char *exeName) {
     return 1; // return 1 for success
 }
 
+void trimTrailingWhitespace(char *str) {
+    int len = strlen(str);
+    while (len > 0 && isspace(str[len - 1])) {
+        str[--len] = '\0';
+    }
+}
+
 // function to check if a string is a valid identifier
 bool isValidID(const char *str) {
     int len = strlen(str);
@@ -116,7 +135,7 @@ bool isValidID(const char *str) {
 }
 
 // function to validate .ml file
-int validateSyntax(FILE *mlFile) {
+bool validateSyntax(FILE *mlFile) {
     char line[MAX_LINE_LENGTH];
     int identifierCount = 0;
     char identifiers[MAX_IDENTIFIERS][MAX_ID_LENGTH + 1]; // store up to 50 unique identifiers
@@ -130,10 +149,13 @@ int validateSyntax(FILE *mlFile) {
             continue;
         }
 
-        // check for comments
+        // skip comments
         if (line[0] == '#') {
             continue; // comment line, skip
         }
+
+        // trim trailing spaces
+        trimTrailingWhitespace(line);
 
         // check for valid identifiers (1-12 lowercase characters)
         char first_word[MAX_ID_LENGTH + 1];
@@ -141,7 +163,7 @@ int validateSyntax(FILE *mlFile) {
 
         if (!isValidID(first_word)) {
             fprintf(stderr, "Invalid identifier: %s\n", first_word);
-            return 0;
+            return false;
         }
 
         // ensure no more than 50 unique identifiers
@@ -156,20 +178,21 @@ int validateSyntax(FILE *mlFile) {
         if (!found) {
             if (identifierCount >= MAX_IDENTIFIERS) {
                 fprintf(stderr, "Error: Exceeded maximum number of unique identifiers (50)\n");
-                return 0;
+                return false;
             }
             strcpy(identifiers[identifierCount], first_word);
             identifierCount++;
         }
 
-        // ensure statements are one per line (no semicolon at the end)
-        if (line[strlen(line) - 1] == ';') {
+        // ensure statements are one per line and do not end with a semicolon
+        int len = strlen(line);
+        if (len > 0 && line[len - 1] == ';') {
             fprintf(stderr, "Error: Statements should not have a terminating semicolon\n");
-            return 0;
+            return false;
         }
     }
 
-    return 1;
+    return true;
 }
 
 bool isFloat(const char *str) {
