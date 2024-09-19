@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include <unistd.h>
 
 #define CFILENAME_SIZE 128
 #define EXEFILENAME_SIZE 128
@@ -16,8 +17,6 @@
 #define MAX_ID_LENGTH 12
 #define MAX_LINE_LENGTH 256
 #define MAX_IDENTIFIERS 50
-
-bool validateFile(FILE *mlFile);
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -31,9 +30,8 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
     // validate the .ml program
-    char line[COMMANDLINE_SIZE];
-    while (fgets(line, sizeof(COMMANDLINE_SIZE), mlFile) != NULL) {
-        // // put function somewhere here
+    if (!validateSyntax(mlFile)) {
+        return EXIT_FAILURE;
     }
 
     // generate temporary C file
@@ -41,9 +39,7 @@ int main(int argc, char *argv[]) {
         snprintf(temporaryC, CFILENAME_SIZE, "ml-%d.c", getpid()); // snprintf used to prevent buffer overflows
 
     // translate .ml to C
-    if (!translateFunction(mlFile, temporaryC)) {
-        return EXIT_FAILURE;
-    }
+    // put code here
 
     fclose(mlFile); // closing ml file
 
@@ -64,17 +60,6 @@ int main(int argc, char *argv[]) {
     remove(cExecutable);
 
     return executeResult;
-}
-
-bool validateFile(FILE *mlFile) {
-    char line[COMMANDLINE_SIZE];
-    char *functions[FUNCVAR_SIZE];
-    char *variables[FUNCVAR_SIZE];
-    while (fgets(line, sizeof(COMMANDLINE_SIZE), mlFile) != NULL) {
-        // something cool
-    }
-    rewind(mlFile);
-    return true;
 }
 
 int executeProgram(const char *exeName, int argc, char *argv[]) {
@@ -117,106 +102,6 @@ int compileProgram(const char *programName, const char *exeName) {
     return 1; // return 1 for success
 }
 
-int translate_function(char **fName, char **fParam, char **fBody, FILE *cFile) {
-	char *rType = "";
-	bool foundReturn = false;
-	int param = 0;
-	int numParam = atoi(fName[1]);
-	int line = 0;
-	int numLines = atoi(fName[2]);
-	char parameters[50] = "";
-
-	while (param+1 < numParam) {
-		strcat(parameters, "float ");
-		strcat(parameters, fParam[param]);
-		strcat(parameters, ", ");
-		param++;
-	}
-
-	if (numParam != 0) {
-		strcat(parameters, "float ");
-		strcat(parameters, fParam[param]);
-	}
-	else {
-		strcat(parameters, "void");
-	}
-
-
-	while (line < numLines) {
-		if (strstr(fBody[line], "\treturn") != NULL) {
-			rType = "float";
-			foundReturn = true;
-			break;
-		}
-		line++;
-	}
-
-	if (!foundReturn) {
-		rType = "void";
-	}
-
-	fprintf(cFile, "%s %s(%s) {\n", rType, fName[0], parameters);
-
-	line = 0;
-	while (line < numLines) {
-		if (fBody[line] != '\t') {
-            fprintf(stderr, "! Syntax error on line %d. Lines in the function body must be indented.\n", line);
-        }
-		else if (strstr(fBody[line], "\treturn ") != NULL) {
-            char expression[MAX_LINE_LENGTH];
-            int i = 7;
-            while (fBody[line][i] != '\n') {
-                expression[i-7] = fBody[line][i];
-                i++;
-            }
-            expression[i-7] = '\0';
-            fprintf(cFile, "\treturn %s;\n", expression);
-            //need to implement variable checking for expressions
-        }
-        else if (strstr(fBody[line], "\tprint ") != NULL) {
-            char expression[MAX_LINE_LENGTH];
-            int i = 6;
-            while (fBody[line][i] != '\n') {
-                expression[i-6] = fBody[line][i];
-                i++;
-            }
-            expression[i-6] = '\0';
-            //add rounding check if ends in .0 print to .0 places
-            fprintf(cFile, "\tprintf(\"%%.6f\\n\", %s);\n", expression);
-        }
-        else if (strstr(fBody[line], "<-") != NULL) {
-            char identifier[MAX_ID_LENGTH];
-            char expression[MAX_LINE_LENGTH];
-            int i = 0;
-
-            while (fBody[line][i] != '<') {
-                identifier[i] = fBody[line][i];
-                i++;
-            }
-            identifier[i] = '\0';
-
-            i += 3;
-            int j = 0;
-            while (fBody[line][i] != '\n') {
-                expression[j] = fBody[line][i];
-                i++;
-                j++;
-            }
-            expression[j] = '\0';
-
-            fprintf(cFile, "\tfloat %s = %s;\n", identifier, expression);
-            //add variable name to array for variable checking
-        }
-        else {
-            fprintf(stderr, "! Syntax error on line: %d\n", line);
-            exit(EXIT_FAILURE);
-        }
-        line++;
-    }
-    fprintf(cFile, "}\n");
-    exit(EXIT_SUCCESS);
-}
-
 // function to check if a string is a valid identifier
 bool isValidID(const char *str) {
     int len = strlen(str);
@@ -230,7 +115,7 @@ bool isValidID(const char *str) {
 }
 
 // function to validate .ml file
-bool validateSyntax(FILE *mlFile) {
+int validateSyntax(FILE *mlFile) {
     char line[MAX_LINE_LENGTH];
     int identifierCount = 0;
     char identifiers[MAX_IDENTIFIERS][MAX_ID_LENGTH + 1]; // store up to 50 unique identifiers
@@ -255,7 +140,7 @@ bool validateSyntax(FILE *mlFile) {
 
         if (!isValidID(first_word)) {
             fprintf(stderr, "Invalid identifier: %s\n", first_word);
-            return false;
+            return 0;
         }
 
         // ensure no more than 50 unique identifiers
@@ -270,7 +155,7 @@ bool validateSyntax(FILE *mlFile) {
         if (!found) {
             if (identifierCount >= MAX_IDENTIFIERS) {
                 fprintf(stderr, "Error: Exceeded maximum number of unique identifiers (50)\n");
-                return false;
+                return 0;
             }
             strcpy(identifiers[identifierCount], first_word);
             identifierCount++;
@@ -279,9 +164,9 @@ bool validateSyntax(FILE *mlFile) {
         // ensure statements are one per line (no semicolon at the end)
         if (line[strlen(line) - 1] == ';') {
             fprintf(stderr, "Error: Statements should not have a terminating semicolon\n");
-            return false;
+            return 0;
         }
     }
 
-    return true;
+    return 1;
 }
