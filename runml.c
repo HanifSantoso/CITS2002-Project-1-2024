@@ -38,7 +38,6 @@ void printUsage(const char *prog_name) {
     printf("    <output_file>  The output file where the C code will be generated.\n");
 }
 
-
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         print_usage(argv[0]);
