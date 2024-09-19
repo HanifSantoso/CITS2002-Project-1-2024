@@ -75,6 +75,7 @@ int main(int argc, char *argv[]) {
     return executeResult;
 }
 
+// function to execute the program
 int executeProgram(const char *exeName, int argc, char *argv[]) {
     char command[COMMANDLINE_SIZE];
     // initializing command buffer with the filename
@@ -97,6 +98,7 @@ int executeProgram(const char *exeName, int argc, char *argv[]) {
     return 1;
 }
 
+// function to compile the executable
 int compileProgram(const char *programName, const char *exeName) {
     char command[COMMANDLINE_SIZE];
     
@@ -115,6 +117,7 @@ int compileProgram(const char *programName, const char *exeName) {
     return 1; // return 1 for success
 }
 
+// function to remove trailing white spaces
 void trimTrailingWhitespace(char *str) {
     int len = strlen(str);
     while (len > 0 && isspace(str[len - 1])) {
@@ -195,6 +198,7 @@ bool validateSyntax(FILE *mlFile) {
     return true;
 }
 
+// function to check float numbers in expression
 bool isFloat(const char *str) {
     bool dotFound = false;
 
@@ -224,6 +228,7 @@ bool isFloat(const char *str) {
     return dotFound; // must contain at least one dot to be a valid float
 }
 
+// function to check integers in expression
 int isInteger(const char *str) {
     while (*str) {
         if (!isdigit(*str)) {
@@ -234,6 +239,7 @@ int isInteger(const char *str) {
     return 1; // is integer
 }
 
+// function to check variables in expression
 bool is_variable(const char *expression, char variables[MAX_IDENTIFIERS][MAX_ID_LENGTH], int var_count) {
     // simple check for the expression if it contains variables
     for (int i = 0; i < var_count; i++) {
@@ -244,11 +250,13 @@ bool is_variable(const char *expression, char variables[MAX_IDENTIFIERS][MAX_ID_
     return false;
 }
 
+// function to check function calls in expression
 bool is_function_call(const char *expression) {
     // a simple check to see if the expression contains a function call like `function_name(args)`
     return (strchr(expression, '(') && strchr(expression, ')'));
 }
 
+// function to translate .ml functions to c functions.
 void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBody[], char variables[MAX_IDENTIFIERS][MAX_ID_LENGTH], int *var_count, FILE *cFile) {
     int ch = 0;
     char *r_type = ""; // return type
@@ -376,6 +384,7 @@ void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBod
     fprintf(cFile, "}\n");
 }
 
+// function to parse and translate .ml file to c file.
 int parseML(FILE *mlFile, FILE *cFile) {
     char line[MAX_LINE_LENGTH];
     char fName[3][MAX_ID_LENGTH];    // array to store function name, number of parameters, and number of lines
