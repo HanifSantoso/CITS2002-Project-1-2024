@@ -40,7 +40,7 @@ void printUsage(const char *prog_name) {
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        print_usage(argv[0]);
+        printUsage(argv[0]);
         exit(EXIT_FAILURE);
     }
     // open .ml file
@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
         snprintf(temporaryC, CFILENAME_SIZE, "ml-%d.c", getpid()); // snprintf used to prevent buffer overflows
 
     // translate .ml to C
-    int translateResult = parseML(mlFile, temporaryC);
+    int translateResult = parseML(mlFile, *temporaryC);
     printf("%i", translateResult);
 
     fclose(mlFile); // closing ml file
@@ -350,15 +350,15 @@ void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBod
             expression[exprIndex] = '\0';  // null-terminate the expression
 
             // check if the expression is a known variable
-            bool is_var = false;
+            bool isVar = false;
             for (int i = 0; i < (*varCount); i++) {
                 if (strcmp(variables[i], expression) == 0) {
-                    is_var = true;
+                    isVar = true;
                 }
             }
 
             // print based on type checking
-            if (is_var || is_integer(expression)) {
+            if (isVar || isInteger(expression)) {
                 fprintf(cFile, "    printf(\"%s\", %s);\n", is_integer(expression) ? "%d" : "%f", expression);
             } else {
                 fprintf(stderr, "Unknown variable or invalid expression in print statement: %s\n", expression);
