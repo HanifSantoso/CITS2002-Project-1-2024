@@ -25,9 +25,9 @@ bool isValidID(const char *str);
 bool validateSyntax(FILE *mlFile);
 bool isFloat(const char *str);
 int isInteger(const char *str);
-bool is_variable(const char *expression, char variables[MAX_IDENTIFIERS][MAX_ID_LENGTH], int var_count);
+bool is_variable(const char *expression, char variables[MAX_IDENTIFIERS][MAX_ID_LENGTH], int varCount);
 bool is_function_call(const char *expression);
-void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBody[], char variables[MAX_IDENTIFIERS][MAX_ID_LENGTH], int *var_count, FILE *cFile);
+void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBody[], char variables[MAX_IDENTIFIERS][MAX_ID_LENGTH], int *varCount, FILE *cFile);
 int parseML(FILE *mlFile, FILE *cFile);
 void printUsage(const char *prog_name);
 
@@ -248,9 +248,9 @@ int isInteger(const char *str) {
 }
 
 // function to check variables in expression
-bool is_variable(const char *expression, char variables[MAX_IDENTIFIERS][MAX_ID_LENGTH], int var_count) {
+bool isVariable(const char *expression, char variables[MAX_IDENTIFIERS][MAX_ID_LENGTH], int varCount) {
     // simple check for the expression if it contains variables
-    for (int i = 0; i < var_count; i++) {
+    for (int i = 0; i < varCount; i++) {
         if (strcmp(variables[i], expression) == 0) {
             return true;
         }
@@ -259,13 +259,13 @@ bool is_variable(const char *expression, char variables[MAX_IDENTIFIERS][MAX_ID_
 }
 
 // function to check function calls in expression
-bool is_function_call(const char *expression) {
+bool isFunctionCall(const char *expression) {
     // a simple check to see if the expression contains a function call like `function_name(args)`
     return (strchr(expression, '(') && strchr(expression, ')'));
 }
 
 // function to translate .ml functions to c functions.
-void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBody[], char variables[MAX_IDENTIFIERS][MAX_ID_LENGTH], int *var_count, FILE *cFile) {
+void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBody[], char variables[MAX_IDENTIFIERS][MAX_ID_LENGTH], int *varCount, FILE *cFile) {
     int ch = 0;
     char *r_type = ""; // return type
     bool foundReturn = false; // flag to track if return was found
@@ -351,7 +351,7 @@ void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBod
 
             // check if the expression is a known variable
             bool is_var = false;
-            for (int i = 0; i < (*var_count); i++) {
+            for (int i = 0; i < (*varCount); i++) {
                 if (strcmp(variables[i], expression) == 0) {
                     is_var = true;
                 }
@@ -367,7 +367,7 @@ void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBod
         else if (sscanf(fBody[ch], "%s <- %[^\n]", varName, expression) == 2) {
             // Check if the variable has already been declared
             bool alreadyDeclared = false;
-            for (int i = 0; i < *var_count; i++) {
+            for (int i = 0; i < *varCount; i++) {
                 if (strcmp(variables[i], varName) == 0) {
                     alreadyDeclared = true;
                 }
@@ -376,8 +376,8 @@ void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBod
             if (!alreadyDeclared) {
                 // Declare the variable if it's not already declared
                 fprintf(cFile, "    float %s;\n", varName);
-                strcpy(variables[*var_count], varName);
-                (*var_count)++;
+                strcpy(variables[*varCount], varName);
+                (*varCount)++;
             }
 
             // Output the full expression to the C file
@@ -400,8 +400,8 @@ int parseML(FILE *mlFile, FILE *cFile) {
     char *fBody[MAX_IDENTIFIERS] = {0};    // array to hold function body lines
     int bodyLineCount = 0;           // tracks the number of lines in the function body
     char variables[MAX_IDENTIFIERS][MAX_ID_LENGTH]; // array to store variable names
-    int var_count = 0;               // counter for the number of variables
-    char var_name[MAX_ID_LENGTH];   // buffer to hold the variable name
+    int varCount = 0;               // counter for the number of variables
+    char varName[MAX_ID_LENGTH];   // buffer to hold the variable name
     char value[MAX_ID_LENGTH];      // buffer to hold the value (not used in current code)
     char expression[MAX_LINE_LENGTH]; // buffer to hold expressions
 
@@ -460,7 +460,7 @@ int parseML(FILE *mlFile, FILE *cFile) {
             sprintf(fName[2], "%d", bodyLineCount);  // store number of lines in the body
 
             // call translate_function after parsing each function
-            translate_function(fName, fParam, fBody, variables, &var_count, cFile);
+            translate_function(fName, fParam, fBody, variables, &varCount, cFile);
 
             // free allocated memory for parameters and body lines
             for (int j = 0; j < paramCount; j++) {
@@ -474,10 +474,10 @@ int parseML(FILE *mlFile, FILE *cFile) {
             bodyLineCount = 0;
         } else if (sscanf(line, "print %[^\n]", expression) == 1) {
             // check if the expression contains function calls or complex operations
-            bool is_var = is_variable(expression, variables, var_count);
-            bool is_int = is_integer(expression);
-            bool is_func_call = is_function_call(expression);
-            bool is_flo = is_float(expression);
+            bool is_var = isVariable(expression, variables, varCount);
+            bool is_int = isInteger(expression);
+            bool is_func_call = isFunctionCall(expression);
+            bool is_flo = isFloat(expression);
         
             // handle the expression (either variable, integer, function call, or float)
             if (is_var || is_int || is_func_call || is_flo) {
@@ -486,22 +486,22 @@ int parseML(FILE *mlFile, FILE *cFile) {
             } else {
                 fprintf(stderr, "Unknown variable or invalid expression in print statement: %s\n", expression);
             }
-        } else if (sscanf(line, "%s <- %[^\n]", var_name, expression) == 2) {
+        } else if (sscanf(line, "%s <- %[^\n]", varName, expression) == 2) {
             // store the variable name if not already present
             bool already_declared = false;
-            for (int i = 0; i < var_count; i++) {
-                if (strcmp(variables[i], var_name) == 0) {
+            for (int i = 0; i < varCount; i++) {
+                if (strcmp(variables[i], varName) == 0) {
                     already_declared = true;
                 }
             }
             if (!already_declared) {
                 // declare the variable
-                fprintf(cFile, "float %s;\n", var_name);
-                strcpy(variables[var_count], var_name);
-                (var_count)++;
+                fprintf(cFile, "float %s;\n", varName);
+                strcpy(variables[varCount], varName);
+                (varCount)++;
             }
             // write the full expression to the C file
-            fprintf(cFile, "%s = %s;\n", var_name, expression);
+            fprintf(cFile, "%s = %s;\n", varName, expression);
         }
     }
     return 0;
