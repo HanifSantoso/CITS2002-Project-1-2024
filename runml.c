@@ -96,13 +96,13 @@ int main(int argc, char *argv[]) {
 int executeProgram(const char *exeName, int argc, char *argv[]) {
     char command[COMMAND_SIZE];
     // initializing command buffer with the filename
-    snprintf(command, sizeof(COMMAND_SIZE), "./%s", exeName);
+    snprintf(command, sizeof(command), "./%s", exeName);
 
     // append each argument to the command string
     for (int i = 0; i < argc; i++) {
         // safely append a space followed by the argument
-        strncat(command, " ", sizeof(COMMAND_SIZE) - strlen(command) - 1);
-        strncat(command, argv[i], sizeof(COMMAND_SIZE) - strlen(command) - 1);
+        strncat(command, " ", sizeof(command) - strlen(command) - 1);
+        strncat(command, argv[i], sizeof(command) - strlen(command) - 1);
     }
 
     // execute the command
@@ -120,7 +120,7 @@ int compileProgram(const char *programName, const char *exeName) {
     char command[COMMAND_SIZE];
     
     // construct the gcc command
-    snprintf(command, sizeof(COMMAND_SIZE), "gcc -std=c11 %s -o %s", programName, exeName);
+    snprintf(command, sizeof(command), "gcc -std=c11 %s -o %s", programName, exeName);
 
     // execute the gcc command
     int status = system(command);
