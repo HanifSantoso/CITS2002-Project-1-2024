@@ -29,6 +29,15 @@ bool is_variable(const char *expression, char variables[MAX_IDENTIFIERS][MAX_ID_
 bool is_function_call(const char *expression);
 void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBody[], char variables[MAX_IDENTIFIERS][MAX_ID_LENGTH], int *var_count, FILE *cFile);
 int parseML(FILE *mlFile, FILE *cFile);
+void printUsage(const char *prog_name);
+
+// function to print details of the c program and how to use it.
+void printUsage(const char *prog_name) {
+    printf("Usage: %s <input_file> <output_file>\n", prog_name);
+    printf("    <input_file>   The input file in custom markup language format.\n");
+    printf("    <output_file>  The output file where the C code will be generated.\n");
+}
+
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
