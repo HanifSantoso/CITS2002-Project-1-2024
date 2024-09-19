@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
     
     // translate .ml to C
     int translateResult = parseML(mlFile, cFile);
-    printf("%i\n", translateResult);  // print translation result (0 for success, non-zero for failure)
+    printf("Translation Result: %i\n", translateResult);  // print translation result (0 for success, non-zero for failure)
 
     fclose(mlFile); // closing ml file
     fclose(cFile); // closing temporary c file
@@ -414,6 +414,10 @@ int parseML(FILE *mlFile, FILE *cFile) {
     char value[MAX_ID_LENGTH];      // buffer to hold the value (not used in current code)
     char expression[MAX_LINE_LENGTH]; // buffer to hold expressions
 
+    // Write the main function header
+    fprintf(cFile, "#include <stdio.h>\n\n");
+    fprintf(cFile, "int main() {\n");
+
     while (fgets(line, sizeof(line), mlFile) != NULL) {
         if (line[0] == '#' || line[0] == '\n') {
             // skip comments and empty lines
@@ -513,5 +517,10 @@ int parseML(FILE *mlFile, FILE *cFile) {
             fprintf(cFile, "%s = %s;\n", varName, expression);
         }
     }
+    
+    // Close the main function
+    fprintf(cFile, "    return 0;\n");
+    fprintf(cFile, "}\n");
+
     return 0;
 }
