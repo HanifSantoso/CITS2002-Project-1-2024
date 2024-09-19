@@ -39,7 +39,8 @@ int main(int argc, char *argv[]) {
         snprintf(temporaryC, CFILENAME_SIZE, "ml-%d.c", getpid()); // snprintf used to prevent buffer overflows
 
     // translate .ml to C
-    // put code here
+    int translateResult = parseML(mlFile, temporaryC);
+    printf("%i", translateResult);
 
     fclose(mlFile); // closing ml file
 
