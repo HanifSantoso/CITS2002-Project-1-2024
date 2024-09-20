@@ -529,38 +529,38 @@ int parseML(FILE *mlFile, FILE *cFile) {
             } else {
                 fprintf(cFile, "float %s = %s;\n", varName, expression);
             }
-        } else if (sscanf(line, "%[^ (] (%[^\n])", fCall, expression) == 2) {
+        } //else if (sscanf(line, "%[^ (] (%[^\n])", fCall, expression) == 2) {
             // start main function in the C file
-            fprintf(cFile, "int main(int argc, char *argv[]) {\n");
+        //    fprintf(cFile, "int main(int argc, char *argv[]) {\n");
 
             // debug output to verify correct function name
-            printf("Function Call: %s\n", fCall);
+        //    printf("Function Call: %s\n", fCall);
 
             // extract arguments
-            char *token;
-            char *arguments[MAX_IDENTIFIERS];
-            int argCount = 0;
+        //    char *token;
+        //    char *arguments[MAX_IDENTIFIERS];
+        //    int argCount = 0;
 
             // tokenize the arguments
-            token = strtok(expression, ",");
-            while (token != NULL && argCount < MAX_IDENTIFIERS) {
-                arguments[argCount++] = token;
-                token = strtok(NULL, ",");
-            }
+        //    token = strtok(expression, ",");
+        //    while (token != NULL && argCount < MAX_IDENTIFIERS) {
+        //        arguments[argCount++] = token;
+        //        token = strtok(NULL, ",");
+        //    }
 
             // handle function call
-            fprintf(cFile, "printf(\"%%f\\n\", %s(", fCall);
+        //    fprintf(cFile, "printf(\"%%f\\n\", %s(", fCall);
 
             // print the arguments
-            for (int i = 0; i < argCount; i++) {
-                fprintf(cFile, "%s", arguments[i]);
-                if (i < argCount - 1) {
-                    fprintf(cFile, ", ");
-                }
-            }
+        //    for (int i = 0; i < argCount; i++) {
+        //        fprintf(cFile, "%s", arguments[i]);
+        //        if (i < argCount - 1) {
+        //            fprintf(cFile, ", ");
+        //        }
+        //    }
 
-            fprintf(cFile, "));\n");
-        }
+        //    fprintf(cFile, "));\n");
+        //}
 
     // close the main function
     fprintf(cFile, "    return 0;\n");
