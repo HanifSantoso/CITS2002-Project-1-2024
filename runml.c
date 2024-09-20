@@ -31,18 +31,7 @@ void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBod
 int parseML(FILE *mlFile, FILE *cFile);
 void printUsage(const char *prog_name);
 
-// function to print details of the c program and how to use it.
-void printUsage(const char *prog_name) {
-    printf("Usage: %s <input_file> <output_file>\n", prog_name);
-    printf("    <input_file>   The input file in custom markup language format.\n");
-    printf("    <output_file>  The output file where the C code will be generated.\n");
-}
-
 int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        printUsage(argv[0]);
-        exit(EXIT_FAILURE);
-    }
     // open .ml file
     FILE *mlFile = fopen(argv[1], "r");
     if (mlFile == NULL) {
@@ -54,9 +43,11 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    rewind(mlFile);
+
     // generate temporary C file
     char temporaryC[CFILENAME_SIZE];
-        snprintf(temporaryC, CFILENAME_SIZE, "ml-%d.c", getpid()); // snprintf used to prevent buffer overflows
+        snprintf(temporaryC, sizeof(temporaryC), "ml-%d.c", getpid()); // snprintf used to prevent buffer overflows
     
     FILE *cFile = fopen(temporaryC, "w");
     
@@ -76,18 +67,18 @@ int main(int argc, char *argv[]) {
     // compile C file to executable
     char cExecutable[EXEFILENAME_SIZE];
 
-    snprintf(cExecutable, EXEFILENAME_SIZE, "ml-%d", getpid()); // using spnrintf to prevent potential buffer overflows
+    snprintf(cExecutable, sizeof(cExecutable), "ml-%d", getpid()); // using spnrintf to prevent potential buffer overflows
 
     if (!compileProgram(temporaryC, cExecutable)) {
         return EXIT_FAILURE;
     }
 
     // execute program
-    int executeResult = executeProgram(cExecutable, argc - 2, argv + 2);
+    int executeResult = executeProgram(cExecutable, 0, NULL);
 
     // clean up temporary
-    remove(cExecutable);
-    remove(temporaryC);
+    // remove(cExecutable);
+    // remove(temporaryC);
 
     return executeResult;
 }
@@ -105,6 +96,9 @@ int executeProgram(const char *exeName, int argc, char *argv[]) {
         strncat(command, argv[i], sizeof(command) - strlen(command) - 1);
     }
 
+    // debug printing command
+    printf("Executing command: %s\n", command);
+
     // execute the command
     int status = system(command);
     if (status != 0) {
@@ -112,6 +106,9 @@ int executeProgram(const char *exeName, int argc, char *argv[]) {
         fprintf(stderr, "Error: Execution of '%s' failed\n", exeName);
         return 0;
     }
+
+    printf("\n");
+
     return 1;
 }
 
@@ -121,6 +118,9 @@ int compileProgram(const char *programName, const char *exeName) {
     
     // construct the gcc command
     snprintf(command, sizeof(command), "gcc -std=c11 %s -o %s", programName, exeName);
+
+    // debug print the command
+    printf("Compiling command: %s\n", command);
 
     // execute the gcc command
     int status = system(command);
@@ -318,11 +318,12 @@ void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBod
         }
     
         // ensure there's enough space in paramList to concatenate the parameter and a comma
-        if (strlen(paramList) + strlen(fParam[i]) + 3 > MAX_LINE_LENGTH) {  // +3 for ", " and null-terminator
+        if (strlen(paramList) + strlen(fParam[i]) + 9 > MAX_LINE_LENGTH) {  // +9 for ", ", "float " and null-terminator
             fprintf(stderr, "Parameter list too long to fit in buffer\n");
             return;
         }
-    
+
+        strcat(paramList, "float ");
         strcat(paramList, fParam[i]);  // concatenate the parameter name
     
         if (i < paramCount - 1) {
@@ -331,7 +332,7 @@ void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBod
     }
 
     // Using paramList in the function declaration
-    fprintf(cFile, "function %s(%s) {\n", fName[0], paramList);  // using fName[0] (the function name) and paramList
+    fprintf(cFile, "%s %s(%s) {\n", r_type, fName[0], paramList);  // using fName[0] (the function name) and paramList
 
     // parse body of function
     while (fBody[ch] != NULL && fBody[ch][0] != '\0') {
@@ -411,16 +412,14 @@ int parseML(FILE *mlFile, FILE *cFile) {
     char variables[MAX_IDENTIFIERS][MAX_ID_LENGTH]; // array to store variable names
     int varCount = 0;               // counter for the number of variables
     char varName[MAX_ID_LENGTH];   // buffer to hold the variable name
-    char value[MAX_ID_LENGTH];      // buffer to hold the value (not used in current code)
     char expression[MAX_LINE_LENGTH]; // buffer to hold expressions
 
     // Write the main function header
-    fprintf(cFile, "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n\n");
-    fprintf(cFile, "int main() {\n");
+    fprintf(cFile, "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n");
+    // fprintf(cFile, "int main() {\n");
 
     while (fgets(line, sizeof(line), mlFile) != NULL) {
         if (line[0] == '#' || line[0] == '\n') {
-            // skip comments and empty lines
             continue;
         } else if (strncmp(line, "function ", 9) == 0) {
             int i = 9;  // start reading function name after "function "
@@ -457,6 +456,8 @@ int parseML(FILE *mlFile, FILE *cFile) {
             }
             sprintf(fName[1], "%d", paramCount);  // store number of parameters
 
+            printf("Current stored data: %s, %s, %s", fName[0], fParam[0], fName[1]);
+
             // parse function body (assume body starts after function declaration)
             while (fgets(line, sizeof(line), mlFile) != NULL && line[0] != '\n' && line[0] != '#') {
                 if (bodyLineCount >= MAX_IDENTIFIERS) {
@@ -469,6 +470,7 @@ int parseML(FILE *mlFile, FILE *cFile) {
                     exit(EXIT_FAILURE);
                 }
                 strcpy(fBody[bodyLineCount++], line);
+                printf("Function Body Line %d: %s", bodyLineCount, fBody[bodyLineCount - 1]); // debug output
             }
             sprintf(fName[2], "%d", bodyLineCount);  // store number of lines in the body
 
@@ -485,7 +487,11 @@ int parseML(FILE *mlFile, FILE *cFile) {
 
             // reset body line count for the next function
             bodyLineCount = 0;
+
         } else if (sscanf(line, "print %[^\n]", expression) == 1) {
+            // Write the main function header
+            fprintf(cFile, "int main(int argc, char *argv[]) {\n");
+
             // check if the expression contains function calls or complex operations
             bool is_var = isVariable(expression, variables, varCount);
             bool is_int = isInteger(expression);
@@ -493,9 +499,11 @@ int parseML(FILE *mlFile, FILE *cFile) {
             bool is_flo = isFloat(expression);
         
             // handle the expression (either variable, integer, function call, or float)
-            if (is_var || is_int || is_func_call || is_flo) {
+            if (is_var || is_func_call || is_flo) {
                 // print as float (can be adjusted to handle different types if needed)
                 fprintf(cFile, "printf(\"%%f\", (float)(%s));\n", expression);
+            } else if (is_int) {
+                fprintf(cFile, "printf(\"%%f\", (int)(%s));\n", expression);
             } else {
                 fprintf(stderr, "Unknown variable or invalid expression in print statement: %s\n", expression);
             }
@@ -509,12 +517,17 @@ int parseML(FILE *mlFile, FILE *cFile) {
             }
             if (!already_declared) {
                 // declare the variable
-                fprintf(cFile, "float %s;\n", varName);
+                // fprintf(cFile, "float %s;\n", varName);
+                // printf("Variable Declared: %s\n", varName); // debug output
                 strcpy(variables[varCount], varName);
                 (varCount)++;
             }
             // write the full expression to the C file
-            fprintf(cFile, "%s = %s;\n", varName, expression);
+            if (isInteger) {
+                fprintf(cFile, "int %s = %s;\n", varName, expression);
+            } else {
+                fprintf(cFile, "float %s = %s;\n", varName, expression);
+            }
         }
     }
 
