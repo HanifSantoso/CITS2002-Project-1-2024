@@ -29,7 +29,6 @@ bool is_variable(const char *expression, char variables[MAX_IDENTIFIERS][MAX_ID_
 bool is_function_call(const char *expression);
 void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBody[], char variables[MAX_IDENTIFIERS][MAX_ID_LENGTH], int *varCount, FILE *cFile);
 int parseML(FILE *mlFile, FILE *cFile);
-void printUsage(const char *prog_name);
 
 int main(int argc, char *argv[]) {
     // open .ml file
@@ -38,6 +37,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Cannot find filepath:%s\n", argv[1]);
         exit(EXIT_FAILURE);
     }
+    
     // validate the .ml program
     if (!validateSyntax(mlFile)) {
         return EXIT_FAILURE;
@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
     
     // translate .ml to C
     int translateResult = parseML(mlFile, cFile);
-    printf("Translation Result: %i\n", translateResult);  // print translation result (0 for success, non-zero for failure)
+    // printf("Translation Result: %i\n", translateResult);  // debugging: print translation result (0 for success, non-zero for failure)
 
     fclose(mlFile); // closing ml file
     fclose(cFile); // closing temporary c file
@@ -86,6 +86,7 @@ int main(int argc, char *argv[]) {
 // function to execute the program
 int executeProgram(const char *exeName, int argc, char *argv[]) {
     char command[COMMAND_SIZE];
+
     // initializing command buffer with the filename
     snprintf(command, sizeof(command), "./%s", exeName);
 
@@ -97,17 +98,18 @@ int executeProgram(const char *exeName, int argc, char *argv[]) {
     }
 
     // debug printing command
-    printf("Executing command: %s\n", command);
+    // printf("Executing command: %s\n", command);
 
     // execute the command
     int status = system(command);
+
     if (status != 0) {
         // print an error message if execution fails
         fprintf(stderr, "Error: Execution of '%s' failed\n", exeName);
         return 0;
     }
 
-    printf("\n");
+    // printf("\n"); // newline for readability
 
     return 1;
 }
@@ -119,8 +121,8 @@ int compileProgram(const char *programName, const char *exeName) {
     // construct the gcc command
     snprintf(command, sizeof(command), "gcc -std=c11 %s -o %s", programName, exeName);
 
-    // debug print the command
-    printf("Compiling command: %s\n", command);
+    // debug: printing the command
+    // printf("Compiling command: %s\n", command);
 
     // execute the gcc command
     int status = system(command);
@@ -179,6 +181,7 @@ bool validateSyntax(FILE *mlFile) {
 
         // check for valid identifiers (1-12 lowercase characters)
         char first_word[MAX_ID_LENGTH + 1];
+
         sscanf(line, "%s", first_word);  // get the first word on the line
 
         if (!isValidID(first_word)) {
@@ -188,6 +191,7 @@ bool validateSyntax(FILE *mlFile) {
 
         // ensure no more than 50 unique identifiers
         bool found = false;
+
         for (int i = 0; i < identifierCount; i++) {
             if (strcmp(identifiers[i], first_word) == 0) {
                 found = true;
@@ -206,6 +210,7 @@ bool validateSyntax(FILE *mlFile) {
 
         // ensure statements are one per line and do not end with a semicolon
         int len = strlen(line);
+
         if (len > 0 && line[len - 1] == ';') {
             fprintf(stderr, "Error: Statements should not have a terminating semicolon\n");
             return false;
@@ -213,10 +218,12 @@ bool validateSyntax(FILE *mlFile) {
     }
 
     return true;
+
 }
 
 // function to check float numbers in expression
 bool isFloat(const char *str) {
+
     bool dotFound = false;
 
     // skip leading whitespace
@@ -243,6 +250,7 @@ bool isFloat(const char *str) {
     }
 
     return dotFound; // must contain at least one dot to be a valid float
+
 }
 
 // function to check integers in expression
@@ -253,11 +261,14 @@ int isInteger(const char *str) {
         }
         str++;
     }
+
     return 1; // is integer
+
 }
 
 // function to check variables in expression
 bool isVariable(const char *expression, char variables[MAX_IDENTIFIERS][MAX_ID_LENGTH], int varCount) {
+
     // simple check for the expression if it contains variables
     for (int i = 0; i < varCount; i++) {
         if (strcmp(variables[i], expression) == 0) {
@@ -334,16 +345,18 @@ void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBod
         }
     }
 
-    // Using paramList in the function declaration
+    // using paramList in the function declaration
     fprintf(cFile, "%s %s(%s) {\n", r_type, fName[0], paramList);  // using fName[0] (the function name) and paramList
 
     // parse body of function
     while (fBody[ch] != NULL && fBody[ch][0] != '\0') {
         if (strncmp(fBody[ch], "\treturn", 7) == 0) {
+
             int i = 7;  // offset for the start of the return expression
 
             // extract the return expression
             int exprIndex = 0;
+
             while (fBody[ch][i] != '\n' && fBody[ch][i] != '\0' && exprIndex < sizeof(expression) - 1) {
                 expression[exprIndex++] = fBody[ch][i++];
             }
@@ -351,22 +364,27 @@ void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBod
 
             // write the return statement to the C file
             fprintf(cFile, "    return%s;\n", expression);
+
         } 
         else if (strncmp(fBody[ch], "\tprint ", 7) == 0) {
+
             int i = 7;
 
             int exprIndex = 0;
+
             while (fBody[ch][i] != '\n' && fBody[ch][i] != '\0' && exprIndex < sizeof(expression) - 1) {
                 expression[exprIndex++] = fBody[ch][i++];
             }
+
             expression[exprIndex] = '\0';
 
             char *token;
             char *arguments[MAX_IDENTIFIERS];
             int argCount = 0;
 
-            // Tokenize the arguments
+            // tokenize the arguments
             token = strtok(expression, ",");
+
             while (token != NULL && argCount < MAX_IDENTIFIERS) {
                 arguments[argCount++] = token;
                 token = strtok(NULL, ",");
@@ -376,8 +394,10 @@ void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBod
         
         }
         else if (sscanf(fBody[ch], "%s <- %[^\n]", varName, expression) == 2) {
-            // Check if the variable has already been declared
+
+            // check if the variable has already been declared
             bool alreadyDeclared = false;
+
             for (int i = 0; i < *varCount; i++) {
                 if (strcmp(variables[i], varName) == 0) {
                     alreadyDeclared = true;
@@ -385,38 +405,42 @@ void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBod
             }
 
             if (!alreadyDeclared) {
-                // Declare the variable if it's not already declared
+                // declare the variable if it's not already declared
                 fprintf(cFile, "    float %s;\n", varName);
                 strcpy(variables[*varCount], varName);
                 (*varCount)++;
             }
 
-            // Output the full expression to the C file
+            // output the full expression to the C file
             fprintf(cFile, "    %s = %s;\n", varName, expression);
+
         } else {
+
             fprintf(stderr, "Syntax error in variable assignment: %s\n", fBody[ch]);
+
         }
         ch++;
     }
 
     // close the function in the C file
     fprintf(cFile, "}\n");
+
 }
 
 // function to parse and translate .ml file to c file.
 int parseML(FILE *mlFile, FILE *cFile) {
     char line[MAX_LINE_LENGTH];
-    char fName[3][MAX_ID_LENGTH];    // array to store function name, number of parameters, and number of lines
-    char *fParam[MAX_IDENTIFIERS] = {0};   // array to hold function parameters
-    char *fBody[MAX_IDENTIFIERS] = {0};    // array to hold function body lines
-    int bodyLineCount = 0;           // tracks the number of lines in the function body
+    char fName[3][MAX_ID_LENGTH];                   // array to store function name, number of parameters, and number of lines
+    char *fParam[MAX_IDENTIFIERS] = {0};            // array to hold function parameters
+    char *fBody[MAX_IDENTIFIERS] = {0};             // array to hold function body lines
+    int bodyLineCount = 0;                          // tracks the number of lines in the function body
     char variables[MAX_IDENTIFIERS][MAX_ID_LENGTH]; // array to store variable names
-    int varCount = 0;               // counter for the number of variables
-    char varName[MAX_ID_LENGTH];   // buffer to hold the variable name
-    char expression[MAX_LINE_LENGTH]; // buffer to hold expressions
-    char fCall[MAX_ID_LENGTH];
+    int varCount = 0;                               // counter for the number of variables
+    char varName[MAX_ID_LENGTH];                    // buffer to hold the variable name
+    char expression[MAX_LINE_LENGTH];               // buffer to hold expressions
+    char fCall[MAX_ID_LENGTH];                      // buffer to hold the function call
 
-    // Write the main function header
+    // write the libraries to be used
     fprintf(cFile, "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n");
     // fprintf(cFile, "int main() {\n");
 
@@ -424,6 +448,7 @@ int parseML(FILE *mlFile, FILE *cFile) {
         if (line[0] == '#' || line[0] == '\n') {
             continue;
         } else if (strncmp(line, "function ", 9) == 0) {
+
             int i = 9;  // start reading function name after "function "
             int fNameIndex = 0;
 
@@ -431,6 +456,7 @@ int parseML(FILE *mlFile, FILE *cFile) {
             while (line[i] != ' ' && line[i] != '\n' && fNameIndex < MAX_ID_LENGTH - 1) {
                 fName[0][fNameIndex++] = line[i++];
             }
+
             fName[0][fNameIndex] = '\0';
 
             // skip spaces between function name and parameters
@@ -438,6 +464,7 @@ int parseML(FILE *mlFile, FILE *cFile) {
 
             // parse function parameters
             int paramCount = 0;
+
             while (line[i] != '\n' && line[i] != '\0' && paramCount < MAX_IDENTIFIERS) {
                 while (line[i] == ' ') i++; // skip extra spaces between parameters
                 if (isalpha(line[i])) {
@@ -456,9 +483,10 @@ int parseML(FILE *mlFile, FILE *cFile) {
                     i++;
                 }
             }
+
             sprintf(fName[1], "%d", paramCount);  // store number of parameters
 
-            printf("Current stored data: %s, %s, %s", fName[0], fParam[0], fName[1]);
+            // printf("Current stored data: %s, %s, %s", fName[0], fParam[0], fName[1]); // debug tool: tracks parameters
 
             // parse function body (assume body starts after function declaration)
             while (fgets(line, sizeof(line), mlFile) != NULL && line[0] != '\n' && line[0] != '#') {
@@ -472,8 +500,9 @@ int parseML(FILE *mlFile, FILE *cFile) {
                     exit(EXIT_FAILURE);
                 }
                 strcpy(fBody[bodyLineCount++], line);
-                printf("Function Body Line %d: %s", bodyLineCount, fBody[bodyLineCount - 1]); // debug output
+                // printf("Function Body Line %d: %s", bodyLineCount, fBody[bodyLineCount - 1]); // debug output: checking function body line
             }
+
             sprintf(fName[2], "%d", bodyLineCount);  // store number of lines in the body
 
             // call translate_function after parsing each function
@@ -525,6 +554,7 @@ int parseML(FILE *mlFile, FILE *cFile) {
                     already_declared = true;
                 }
             }
+
             if (!already_declared) {
                 // declare the variable
                 // fprintf(cFile, "float %s;\n", varName);
@@ -532,6 +562,7 @@ int parseML(FILE *mlFile, FILE *cFile) {
                 strcpy(variables[varCount], varName);
                 (varCount)++;
             }
+
             // write the full expression to the C file
             if (isInteger) {
                 fprintf(cFile, "int %s = %s;\n", varName, expression);
@@ -543,36 +574,37 @@ int parseML(FILE *mlFile, FILE *cFile) {
 
             fprintf(cFile, "int main(int argc, char *argv[]) {\n");
 
-            // Debug output to verify correct function name
-            printf("Function Call: %s\n", fCall);
+            // printf("Function Call: %s\n", fCall); // debug output: verify correct function name
 
-            // Extract arguments
+            // extract arguments
             char *token;
             char *arguments[MAX_IDENTIFIERS];
             int argCount = 0;
 
-            // Tokenize the arguments
+            // tokenize the arguments
             token = strtok(expression, ",");
             while (token != NULL && argCount < MAX_IDENTIFIERS) {
                 arguments[argCount++] = token;
                 token = strtok(NULL, ",");
             }
 
-            // Handle function call
+            // handle function call
             fprintf(cFile, "printf(\"%%f\\n\", %s(", fCall);
 
-            // Print the arguments
+            // print the arguments
             for (int i = 0; i < argCount; i++) {
                 fprintf(cFile, "%s", arguments[i]);
                 if (i < argCount - 1) {
                     fprintf(cFile, ", ");
                 }
             }
+
         fprintf(cFile, ");\n");
+
         }
     }
 
-    // Close the main function
+    // close the main function
     fprintf(cFile, "    return 0;\n");
     fprintf(cFile, "}\n");
 
