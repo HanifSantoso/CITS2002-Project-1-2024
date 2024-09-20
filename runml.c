@@ -413,6 +413,7 @@ int parseML(FILE *mlFile, FILE *cFile) {
     int varCount = 0;               // counter for the number of variables
     char varName[MAX_ID_LENGTH];   // buffer to hold the variable name
     char expression[MAX_LINE_LENGTH]; // buffer to hold expressions
+    char fCall[MAX_ID_LENGTH];
 
     // Write the main function header
     fprintf(cFile, "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n");
@@ -488,9 +489,16 @@ int parseML(FILE *mlFile, FILE *cFile) {
             // reset body line count for the next function
             bodyLineCount = 0;
 
-        } else if (sscanf(line, "print %[^\n]", expression) == 1) {
-            // Write the main function header
+        } else if (strncmp(line, "print ", 6) == 0) {
+
             fprintf(cFile, "int main(int argc, char *argv[]) {\n");
+
+            // extract the expression after "print "
+            strcpy(expression, line + 6); // Skip "print " part
+
+            // remove trailing newline or spaces
+            expression[strcspn(expression, "\n")] = 0;
+                    fprintf(cFile, "int main(int argc, char *argv[]) {\n");
 
             // check if the expression contains function calls or complex operations
             bool is_var = isVariable(expression, variables, varCount);
@@ -508,6 +516,7 @@ int parseML(FILE *mlFile, FILE *cFile) {
                 fprintf(stderr, "Unknown variable or invalid expression in print statement: %s\n", expression);
             }
         } else if (sscanf(line, "%s <- %[^\n]", varName, expression) == 2) {
+
             // store the variable name if not already present
             bool already_declared = false;
             for (int i = 0; i < varCount; i++) {
@@ -528,6 +537,36 @@ int parseML(FILE *mlFile, FILE *cFile) {
             } else {
                 fprintf(cFile, "float %s = %s;\n", varName, expression);
             }
+        } else if (sscanf(line, "%[^ (] (%[^\n])", fCall, expression) == 2) {
+
+            fprintf(cFile, "int main(int argc, char *argv[]) {\n");
+
+            // Debug output to verify correct function name
+            printf("Function Call: %s\n", fCall);
+
+            // Extract arguments
+            char *token;
+            char *arguments[MAX_IDENTIFIERS];
+            int argCount = 0;
+
+            // Tokenize the arguments
+            token = strtok(expression, ",");
+            while (token != NULL && argCount < MAX_IDENTIFIERS) {
+                arguments[argCount++] = token;
+                token = strtok(NULL, ",");
+            }
+
+            // Handle function call
+            fprintf(cFile, "printf(\"%%f\\n\", %s(", fCall);
+
+            // Print the arguments
+            for (int i = 0; i < argCount; i++) {
+                fprintf(cFile, "%s", arguments[i]);
+                if (i < argCount - 1) {
+                    fprintf(cFile, ", ");
+                }
+            }
+        fprintf(cFile, ");\n");
         }
     }
 
