@@ -501,7 +501,7 @@ int parseML(FILE *mlFile, FILE *cFile) {
             // handle the expression (either variable, integer, function call, or float)
             if (is_var || is_func_call || is_flo) {
                 // print as float (can be adjusted to handle different types if needed)
-                fprintf(cFile, "printf(\"%%f\", (float)(%s));\n", expression);
+                fprintf(cFile, "printf(\"%%f\", (%s));\n", expression);
             } else if (is_int) {
                 fprintf(cFile, "printf(\"%%f\", (int)(%s));\n", expression);
             } else {
