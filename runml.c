@@ -288,7 +288,7 @@ void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBod
         if (strncmp(fBody[ch], "\treturn", 7) == 0) {
             r_type = "float";  // assuming all functions that return use float
             foundReturn = true;
-        } else if (strncmp(fBody[ch], "\tprint", 7) == 0) {
+        } else if (strncmp(fBody[ch], "\tprint", 6) == 0) {
             r_type = "float";
             foundReturn = true;
         }
