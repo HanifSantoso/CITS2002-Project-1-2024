@@ -349,31 +349,29 @@ void translate_function(char fName[3][MAX_ID_LENGTH], char *fParam[], char *fBod
             // write the return statement to the C file
             fprintf(cFile, "    return%s;\n", expression);
         } 
-        else if (strncmp(fBody[ch], "\tprint", 6) == 0) {
-            int i = 6;  // offset for the start of the print expression
+        else if (strncmp(fBody[ch], "\tprint ", 7) == 0) {
+            int i = 7;
 
-            // extract the print expression
             int exprIndex = 0;
             while (fBody[ch][i] != '\n' && fBody[ch][i] != '\0' && exprIndex < sizeof(expression) - 1) {
                 expression[exprIndex++] = fBody[ch][i++];
             }
-            expression[exprIndex] = '\0';  // null-terminate the expression
+            expression[exprIndex] = '\0';
 
-            // check if the expression is a known variable
-            bool isVar = false;
-            for (int i = 0; i < (*varCount); i++) {
-                if (strcmp(variables[i], expression) == 0) {
-                    isVar = true;
-                }
+            char *token;
+            char *arguments[MAX_IDENTIFIERS];
+            int argCount = 0;
+
+            // Tokenize the arguments
+            token = strtok(expression, ",");
+            while (token != NULL && argCount < MAX_IDENTIFIERS) {
+                arguments[argCount++] = token;
+                token = strtok(NULL, ",");
             }
 
-            // print based on type checking
-            if (isVar || isInteger(expression)) {
-                fprintf(cFile, "    printf(\"%s\", %s);\n", isInteger(expression) ? "%d" : "%f", expression);
-            } else {
-                fprintf(stderr, "Unknown variable or invalid expression in print statement: %s\n", expression);
-            }
-        } 
+            fprintf(cFile, "    printf(\"%%f\", (%s));\n", expression);
+        
+        }
         else if (sscanf(fBody[ch], "%s <- %[^\n]", varName, expression) == 2) {
             // Check if the variable has already been declared
             bool alreadyDeclared = false;
@@ -495,10 +493,10 @@ int parseML(FILE *mlFile, FILE *cFile) {
 
             // extract the expression after "print "
             strcpy(expression, line + 6); // Skip "print " part
+            printf("This is the expression: %s", expression);
 
             // remove trailing newline or spaces
             expression[strcspn(expression, "\n")] = 0;
-                    fprintf(cFile, "int main(int argc, char *argv[]) {\n");
 
             // check if the expression contains function calls or complex operations
             bool is_var = isVariable(expression, variables, varCount);
@@ -537,6 +535,7 @@ int parseML(FILE *mlFile, FILE *cFile) {
             } else {
                 fprintf(cFile, "float %s = %s;\n", varName, expression);
             }
+
         } else if (sscanf(line, "%[^ (] (%[^\n])", fCall, expression) == 2) {
 
             fprintf(cFile, "int main(int argc, char *argv[]) {\n");
