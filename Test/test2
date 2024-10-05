@@ -1,0 +1,13 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int main() {
+float one;
+one = 1;
+function increment(value) {
+    return value + one;
+}
+printf("%f", (float)(increment(3) + increment(4)));
+    return 0;
+}
